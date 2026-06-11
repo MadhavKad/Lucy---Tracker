@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lucy's Study Tracker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap');
+
+  :root {
+    --purple: #6D28D9;
+    --purple2: #4F46E5;
+    --blue: #5B8AF0;
+    --blue-light: #EEF3FE;
+    --violet: #8B5CF6;
+    --violet-light: #F3EFFE;
+    --pink: #E05A7A;
+    --pink-light: #FEECF1;
+    --teal: #0AADA8;
+    --teal-light: #E6F7F7;
+    --amber: #F59E0B;
+    --amber-light: #FEF3E2;
+    --green: #22C55E;
+    --red: #EF4444;
+    --bg: #F8FAFC;
+    --card: #ffffff;
+    --border: #E5E7EB;
+    --text: #1F2937;
+    --muted: #9CA3AF;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 20px 16px 40px;
+  }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, var(--purple) 0%, var(--purple2) 100%);
+    border-radius: 18px;
+    padding: 24px 28px;
+    margin-bottom: 16px;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .header-eyebrow {
+    font-size: 11px; font-weight: 700; opacity: 0.7;
+    text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px;
+  }
+  .header h1 { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+  .header p { font-size: 13px; opacity: 0.75; }
+  .header-meta { font-size: 12px; opacity: 0.7; margin-top: 10px; display: flex; align-items: center; gap: 6px; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ADE80; display: inline-block; }
+  .stats { display: flex; gap: 12px; flex-wrap: wrap; }
+  .stat-box {
+    background: rgba(255,255,255,0.15); border-radius: 12px;
+    padding: 10px 18px; text-align: center; min-width: 72px;
+  }
+  .stat-num { font-size: 20px; font-weight: 800; display: block; }
+  .stat-label { font-size: 10px; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  /* PROGRESS BAR */
+  .progress-card {
+    background: white; border-radius: 12px; padding: 14px 20px;
+    margin-bottom: 14px; border: 1.5px solid var(--border);
+  }
+  .progress-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .progress-top span:first-child { font-size: 13px; font-weight: 700; color: var(--text); }
+  .progress-top span:last-child { font-size: 13px; font-weight: 700; color: var(--purple); }
+  .progress-track { background: var(--border); border-radius: 999px; height: 10px; overflow: hidden; }
+  .progress-fill {
+    height: 100%; border-radius: 999px;
+    background: linear-gradient(90deg, var(--purple), var(--teal));
+    transition: width 0.5s ease;
+  }
+  .progress-sub { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+  /* WEAK ALERT */
+  .weak-alert {
+    background: #FFF7ED; border: 1.5px solid #FED7AA;
+    border-radius: 12px; padding: 12px 18px; margin-bottom: 14px;
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .weak-alert-title { font-size: 12px; font-weight: 700; color: #C2410C; margin-bottom: 4px; }
+  .weak-alert-body { font-size: 12px; color: #92400E; }
+
+  /* WEEK TABS */
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tab {
+    padding: 8px 14px; border-radius: 999px; font-size: 12px; font-weight: 600;
+    border: 2px solid var(--border); background: white; color: #6B7280;
+    cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .tab.active { color: white; }
+  .tab-count {
+    margin-left: 6px; font-size: 10px; padding: 1px 6px;
+    border-radius: 999px; background: rgba(255,255,255,0.25);
+  }
+  .tab:not(.active) .tab-count { background: #F3F4F6; color: #6B7280; }
+
+  /* WEEK PANEL */
+  .week-panel { display: none; }
+  .week-panel.visible { display: block; }
+  .week-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .week-bar { width: 4px; height: 20px; border-radius: 999px; }
+  .week-title-text { font-weight: 700; font-size: 15px; color: var(--text); }
+  .week-dates { font-size: 12px; color: var(--muted); margin-left: 8px; }
+
+  /* TOPIC CARD */
+  .topic-card {
+    background: white; border-radius: 10px; margin-bottom: 8px;
+    border: 1.5px solid var(--border); overflow: hidden; transition: all 0.2s;
+  }
+  .topic-card.is-done { background: #F0FDF4; border-color: #86EFAC; }
+  .topic-card.is-today { background: #FEFCE8; border-color: #FDE047; }
+
+  .topic-main {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; flex-wrap: wrap; gap: 10;
+  }
+  .topic-left { display: flex; align-items: center; gap: 10; flex: 1; min-width: 0; flex-wrap: wrap; }
+  .date-badge {
+    font-size: 11px; font-weight: 700; padding: 3px 8px;
+    border-radius: 999px; white-space: nowrap;
+  }
+  .today-badge {
+    background: #FEF08A; color: #92400E;
+    font-size: 10px; font-weight: 800; padding: 2px 7px;
+    border-radius: 999px; white-space: nowrap;
+  }
+  .hy-badge {
+    background: #FFF7ED; color: #EA580C;
+    font-size: 10px; font-weight: 700; padding: 2px 6px;
+    border-radius: 999px; white-space: nowrap;
+  }
+  .topic-name { font-weight: 600; font-size: 14px; color: var(--text); }
+
+  .topic-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+  /* STARS */
+  .stars { display: flex; gap: 2px; }
+  .star { font-size: 18px; cursor: pointer; color: #D1D5DB; transition: color 0.1s, transform 0.1s; user-select: none; }
+  .star.active { color: #F59E0B; }
+  .star:hover { transform: scale(1.2); }
+
+  /* DONE BTN */
+  .done-btn {
+    padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 600;
+    border: 1.5px solid var(--border); background: white; color: #6B7280;
+    cursor: pointer; white-space: nowrap; transition: all 0.2s; font-family: inherit;
+  }
+  .done-btn.completed { background: #DCFCE7; border-color: var(--green); color: #16A34A; }
+
+  /* EXPAND BTN */
+  .expand-btn {
+    background: none; border: none; cursor: pointer; color: var(--muted);
+    font-size: 16px; padding: 0 4px; transition: transform 0.2s;
+  }
+
+  /* NOTES AREA */
+  .topic-notes { padding: 0 16px 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 540px) { .topic-notes { grid-template-columns: 1fr; } }
+  .note-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px; }
+  .note-textarea {
+    width: 100%; height: 64px; padding: 8px 10px;
+    border-radius: 8px; font-size: 12px; font-family: inherit;
+    resize: none; color: var(--text); outline: none;
+    transition: border-color 0.2s;
+  }
+  .note-textarea:focus { border-width: 1.5px; }
+
+  .footer-note {
+    text-align: center; font-size: 11px; color: var(--muted);
+    margin-top: 24px; padding-bottom: 8px;
+  }
+
+  /* SAVE TOAST */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: #1F2937; color: white; padding: 10px 18px;
+    border-radius: 10px; font-size: 13px; font-weight: 600;
+    opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div>
+    <div class="header-eyebrow">Shared Coaching Dashboard</div>
+    <h1>Lucy's Study Tracker</h1>
+    <p>Clinical Placement Practice 1 · DSA & MH</p>
+    <div class="header-meta">
+      <span class="status-dot"></span>
+      <span id="save-status">Live shared — changes save automatically</span>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat-box"><span class="stat-num" id="stat-done">0</span><span class="stat-label">Completed</span></div>
+    <div class="stat-box"><span class="stat-num" id="stat-left">28</span><span class="stat-label">Remaining</span></div>
+    <div class="stat-box"><span class="stat-num" id="stat-avg">—</span><span class="stat-label">Avg ⭐</span></div>
+  </div>
+</div>
+
+<!-- PROGRESS -->
+<div class="progress-card">
+  <div class="progress-top">
+    <span>Overall Progress</span>
+    <span id="pct-label">0%</span>
+  </div>
+  <div class="progress-track">
+    <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+  </div>
+  <div class="progress-sub" id="progress-sub">0 of 28 topics completed</div>
+</div>
+
+<!-- WEAK ALERT -->
+<div class="weak-alert" id="weak-alert" style="display:none">
+  <span style="font-size:18px">⚠️</span>
+  <div>
+    <div class="weak-alert-title">Needs Extra Attention</div>
+    <div class="weak-alert-body" id="weak-alert-body"></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="tabs"></div>
+
+<!-- WEEK PANELS -->
+<div id="panels"></div>
+
+<div class="footer-note">🔗 This tracker is shared — changes made by either person are saved and visible to both.</div>
+
+<div class="toast" id="toast">✓ Saved</div>
+
+<script>
+const HIGH_YIELD = ["Asthma","COPD","Pulmonary Embolism","Stroke","Acute Coronary Syndrome","Heart Failure","Diabetes","Preeclampsia","Postpartum Haemorrhage (PPH)","Meningitis"];
+const STORAGE_KEY = "lucy_tracker_v2";
+
+const WEEK_DEFS = [
+  { title: "Week 1: Respiratory", color: "#5B8AF0", light: "#EEF3FE",
+    names: ["Asthma","COPD","Chest Infections & Bronchitis","Pneumonia","Pulmonary Embolism","Respiratory Review","Practice Questions + Weak Areas"] },
+  { title: "Week 2: Nervous + Endocrine", color: "#8B5CF6", light: "#F3EFFE",
+    names: ["Epilepsy","Meningitis","Concussion","Stroke","Diabetes","Adrenal Insufficiency","Nervous System & Endocrine Review"] },
+  { title: "Week 3: Cardiology + MSK", color: "#E05A7A", light: "#FEECF1",
+    names: ["Angina","Acute Coronary Syndrome","Heart Failure","Rhabdomyolysis","Compartment Syndrome","Frailty","Cardiology & MSK Review"] },
+  { title: "Week 4: Obs & Gynaecology", color: "#0AADA8", light: "#E6F7F7",
+    names: ["Preeclampsia","Placenta Previa","Placental Abruption","Postpartum Haemorrhage (PPH)"] },
+  { title: "Final Consolidation", color: "#F59E0B", light: "#FEF3E2",
+    names: ["Respiratory + Nervous System Quick-Fire Review","Cardiology + Endocrine + MSK Quick-Fire Review","Obstetrics Review + Full Mock Test + Final Weak Areas"] }
+];
+
+// Build dynamic dates from today
+function buildWeeks() {
+  const start = new Date(); start.setHours(0,0,0,0);
+  const fmt = d => d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  const add = (d, n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+  const rangeLabel = (s, count) => {
+    const e = add(s, count-1);
+    return s.getMonth() === e.getMonth() ? `${s.getDate()}–${fmt(e)}` : `${fmt(s)} – ${fmt(e)}`;
+  };
+
+  let day = 0;
+  return WEEK_DEFS.map((def, wi) => {
+    const topics = def.names.map(name => {
+      const dateObj = add(start, day++);
+      return { name, dateStr: fmt(dateObj), dateObj };
+    });
+    const wStart = topics[0].dateObj;
+    return { ...def, topics, dates: rangeLabel(wStart, topics.length) };
+  });
+}
+
+const WEEKS = buildWeeks();
+const TOTAL = WEEKS.reduce((s,w) => s + w.topics.length, 0);
+
+// State
+let state = {};
+
+function loadState() {
+  try { const s = localStorage.getItem(STORAGE_KEY); if (s) state = JSON.parse(s); } catch(e) {}
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    showToast();
+  } catch(e) {}
+}
+
+function key(wi, ti) { return `w${wi}_t${ti}`; }
+function getData(wi, ti) { return state[key(wi,ti)] || { done: false, stars: 0, weak: "", notes: "" }; }
+
+// Toast
+let toastTimer;
+function showToast() {
+  const t = document.getElementById("toast");
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 1800);
+}
+
+// Today check
+function isToday(dateObj) {
+  const now = new Date();
+  return dateObj.getDate() === now.getDate() &&
+    dateObj.getMonth() === now.getMonth() &&
+    dateObj.getFullYear() === now.getFullYear();
+}
+
+// Build UI
+function build() {
+  const tabsEl = document.getElementById("tabs");
+  const panelsEl = document.getElementById("panels");
+
+  WEEKS.forEach((week, wi) => {
+    // Tab
+    const tab = document.createElement("button");
+    tab.className = "tab";
+    tab.id = `tab-${wi}`;
+    tab.style.borderColor = "var(--border)";
+    tab.innerHTML = `${week.title}<span class="tab-count" id="tab-count-${wi}">0/${week.topics.length}</span>`;
+    tab.onclick = () => showWeek(wi);
+    tabsEl.appendChild(tab);
+
+    // Panel
+    const panel = document.createElement("div");
+    panel.className = "week-panel";
+    panel.id = `panel-${wi}`;
+
+    const hdr = document.createElement("div");
+    hdr.className = "week-header";
+    hdr.innerHTML = `
+      <div class="week-bar" style="background:${week.color}"></div>
+      <span class="week-title-text">${week.title}</span>
+      <span class="week-dates">${week.dates}</span>`;
+    panel.appendChild(hdr);
+
+    week.topics.forEach((topic, ti) => {
+      panel.appendChild(buildCard(wi, ti, topic, week));
+    });
+
+    panelsEl.appendChild(panel);
+  });
+
+  // Show current week
+  const todayWi = WEEKS.findIndex(w => w.topics.some(t => isToday(t.dateObj)));
+  showWeek(todayWi >= 0 ? todayWi : 0);
+  updateStats();
+}
+
+function buildCard(wi, ti, topic, week) {
+  const k = key(wi, ti);
+  const d = getData(wi, ti);
+  const today = isToday(topic.dateObj);
+  const hy = HIGH_YIELD.includes(topic.name);
+
+  const card = document.createElement("div");
+  card.className = "topic-card" + (d.done ? " is-done" : today ? " is-today" : "");
+  card.id = `card-${k}`;
+  card.style.borderLeft = `4px solid ${d.done ? "#22C55E" : today ? "#F59E0B" : week.color}`;
+
+  // Stars HTML
+  let starsHtml = "";
+  for (let i = 1; i <= 5; i++) {
+    starsHtml += `<span class="star ${i <= d.stars ? "active" : ""}" 
+      id="star-${k}-${i}" onclick="setStar('${k}',${i})">★</span>`;
+  }
+
+  card.innerHTML = `
+    <div class="topic-main">
+      <div class="topic-left">
+        <span class="date-badge" style="background:${week.light};color:${week.color}">${topic.dateStr}</span>
+        ${today ? `<span class="today-badge">📅 Today</span>` : ""}
+        <span class="topic-name">${topic.name}</span>
+        ${hy ? `<span class="hy-badge">⚡ High Yield</span>` : ""}
+      </div>
+      <div class="topic-right">
+        <div class="stars" id="stars-${k}">${starsHtml}</div>
+        <button class="done-btn ${d.done ? "completed" : ""}" id="btn-${k}" onclick="toggleDone('${k}')">
+          ${d.done ? "✅ Done" : "Mark Done"}
+        </button>
+        <button class="expand-btn" id="exp-${k}" onclick="toggleExpand('${k}')" style="transform:rotate(0deg)">▼</button>
+      </div>
+    </div>
+    <div class="topic-notes" id="notes-${k}" style="display:none">
+      <div>
+        <label class="note-label" style="color:#EF4444">⚠️ Weak Areas to Revisit</label>
+        <textarea class="note-textarea" placeholder="What did she struggle with?"
+          style="border:1.5px solid #FCA5A5;background:#FFF5F5"
+          onchange="updateNote('${k}','weak',this.value)">${d.weak||""}</textarea>
+      </div>
+      <div>
+        <label class="note-label" style="color:#0AADA8">📝 Session Notes</label>
+        <textarea class="note-textarea" placeholder="How did the session go?"
+          style="border:1.5px solid #99F6E4;background:#F0FDFA"
+          onchange="updateNote('${k}','notes',this.value)">${d.notes||""}</textarea>
+      </div>
+    </div>`;
+  return card;
+}
+
+function showWeek(wi) {
+  document.querySelectorAll(".week-panel").forEach((p, i) => p.classList.toggle("visible", i === wi));
+  document.querySelectorAll(".tab").forEach((t, i) => {
+    t.classList.toggle("active", i === wi);
+    if (i === wi) {
+      t.style.background = WEEKS[i].color;
+      t.style.borderColor = WEEKS[i].color;
+      t.style.color = "white";
+    } else {
+      t.style.background = "white";
+      t.style.borderColor = "var(--border)";
+      t.style.color = "#6B7280";
+    }
+  });
+}
+
+function toggleDone(k) {
+  if (!state[k]) state[k] = { done: false, stars: 0, weak: "", notes: "" };
+  state[k].done = !state[k].done;
+  const d = state[k].done;
+  const card = document.getElementById(`card-${k}`);
+  const btn = document.getElementById(`btn-${k}`);
+  // Find week color
+  const [wi] = k.replace("w","").split("_t");
+  const week = WEEKS[parseInt(wi)];
+  card.className = "topic-card" + (d ? " is-done" : "");
+  card.style.borderLeft = `4px solid ${d ? "#22C55E" : week.color}`;
+  btn.className = "done-btn" + (d ? " completed" : "");
+  btn.textContent = d ? "✅ Done" : "Mark Done";
+  saveState();
+  updateStats();
+}
+
+function setStar(k, val) {
+  if (!state[k]) state[k] = { done: false, stars: 0, weak: "", notes: "" };
+  state[k].stars = state[k].stars === val ? 0 : val;
+  const v = state[k].stars;
+  for (let i = 1; i <= 5; i++) {
+    const s = document.getElementById(`star-${k}-${i}`);
+    if (s) s.className = "star" + (i <= v ? " active" : "");
+  }
+  saveState();
+  updateStats();
+}
+
+function updateNote(k, field, val) {
+  if (!state[k]) state[k] = { done: false, stars: 0, weak: "", notes: "" };
+  state[k][field] = val;
+  saveState();
+}
+
+function toggleExpand(k) {
+  const notes = document.getElementById(`notes-${k}`);
+  const btn = document.getElementById(`exp-${k}`);
+  const open = notes.style.display === "none";
+  notes.style.display = open ? "grid" : "none";
+  btn.style.transform = open ? "rotate(180deg)" : "rotate(0deg)";
+}
+
+function updateStats() {
+  const all = Object.values(state);
+  const done = all.filter(d => d.done).length;
+  const starsArr = all.filter(d => d.stars > 0).map(d => d.stars);
+  const avg = starsArr.length ? (starsArr.reduce((a,b)=>a+b,0)/starsArr.length).toFixed(1) : "—";
+  const pct = Math.round((done / TOTAL) * 100);
+
+  document.getElementById("stat-done").textContent = done;
+  document.getElementById("stat-left").textContent = TOTAL - done;
+  document.getElementById("stat-avg").textContent = avg === "—" ? "—" : avg + "★";
+  document.getElementById("pct-label").textContent = pct + "%";
+  document.getElementById("progress-fill").style.width = pct + "%";
+  document.getElementById("progress-sub").textContent = `${done} of ${TOTAL} topics completed`;
+
+  // Tab counts
+  WEEKS.forEach((week, wi) => {
+    const wDone = week.topics.filter((_,ti) => getData(wi,ti).done).length;
+    const el = document.getElementById(`tab-count-${wi}`);
+    if (el) el.textContent = `${wDone}/${week.topics.length}`;
+  });
+
+  // Weak alert
+  const weakTopics = [];
+  WEEKS.forEach((week, wi) => {
+    week.topics.forEach((topic, ti) => {
+      const d = getData(wi, ti);
+      if (d.stars > 0 && d.stars <= 2) weakTopics.push(topic.name);
+    });
+  });
+  const alertEl = document.getElementById("weak-alert");
+  const alertBody = document.getElementById("weak-alert-body");
+  if (weakTopics.length > 0) {
+    alertEl.style.display = "flex";
+    alertBody.textContent = weakTopics.join(", ");
+  } else {
+    alertEl.style.display = "none";
+  }
+}
+
+loadState();
+build();
+</script>
+</body>
+</html>
