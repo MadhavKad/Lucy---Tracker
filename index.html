@@ -261,20 +261,23 @@ const WEEK_DEFS = [
     names: ["Respiratory + Nervous System Quick-Fire Review","Cardiology + Endocrine + MSK Quick-Fire Review","Obstetrics Review + Full Mock Test + Final Weak Areas"] }
 ];
 
-// Build dynamic dates from today
+// ── FIXED start date: 11 June 2025 (the day of the first session with Lucy) ──
+// This never changes, so dates are always stable regardless of when you open the tracker.
 function buildWeeks() {
-  const start = new Date(); start.setHours(0,0,0,0);
+  const START = new Date(2025, 5, 11); // month is 0-indexed: 5 = June
   const fmt = d => d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-  const add = (d, n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+  const add = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
   const rangeLabel = (s, count) => {
-    const e = add(s, count-1);
-    return s.getMonth() === e.getMonth() ? `${s.getDate()}–${fmt(e)}` : `${fmt(s)} – ${fmt(e)}`;
+    const e = add(s, count - 1);
+    return s.getMonth() === e.getMonth()
+      ? `${s.getDate()}–${fmt(e)}`
+      : `${fmt(s)} – ${fmt(e)}`;
   };
 
   let day = 0;
-  return WEEK_DEFS.map((def, wi) => {
+  return WEEK_DEFS.map(def => {
     const topics = def.names.map(name => {
-      const dateObj = add(start, day++);
+      const dateObj = add(START, day++);
       return { name, dateStr: fmt(dateObj), dateObj };
     });
     const wStart = topics[0].dateObj;
@@ -283,7 +286,7 @@ function buildWeeks() {
 }
 
 const WEEKS = buildWeeks();
-const TOTAL = WEEKS.reduce((s,w) => s + w.topics.length, 0);
+const TOTAL = WEEKS.reduce((s, w) => s + w.topics.length, 0);
 
 // State
 let state = {};
@@ -300,7 +303,7 @@ function saveState() {
 }
 
 function key(wi, ti) { return `w${wi}_t${ti}`; }
-function getData(wi, ti) { return state[key(wi,ti)] || { done: false, stars: 0, weak: "", notes: "" }; }
+function getData(wi, ti) { return state[key(wi, ti)] || { done: false, stars: 0, weak: "", notes: "" }; }
 
 // Toast
 let toastTimer;
@@ -354,7 +357,7 @@ function build() {
     panelsEl.appendChild(panel);
   });
 
-  // Show current week
+  // Show current week (based on today's date falling within scheduled dates)
   const todayWi = WEEKS.findIndex(w => w.topics.some(t => isToday(t.dateObj)));
   showWeek(todayWi >= 0 ? todayWi : 0);
   updateStats();
@@ -433,7 +436,6 @@ function toggleDone(k) {
   const d = state[k].done;
   const card = document.getElementById(`card-${k}`);
   const btn = document.getElementById(`btn-${k}`);
-  // Find week color
   const [wi] = k.replace("w","").split("_t");
   const week = WEEKS[parseInt(wi)];
   card.className = "topic-card" + (d ? " is-done" : "");
@@ -486,7 +488,7 @@ function updateStats() {
 
   // Tab counts
   WEEKS.forEach((week, wi) => {
-    const wDone = week.topics.filter((_,ti) => getData(wi,ti).done).length;
+    const wDone = week.topics.filter((_, ti) => getData(wi, ti).done).length;
     const el = document.getElementById(`tab-count-${wi}`);
     if (el) el.textContent = `${wDone}/${week.topics.length}`;
   });
