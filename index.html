@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lucy's Study Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap');
 
@@ -191,9 +192,18 @@
     opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999;
   }
   .toast.show { opacity: 1; }
+
+  /* LOADING */
+  .loading-screen {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: var(--muted); z-index: 1000;
+  }
 </style>
 </head>
 <body>
+
+<div class="loading-screen" id="loading-screen">Loading tracker…</div>
 
 <!-- HEADER -->
 <div class="header">
@@ -240,13 +250,20 @@
 <!-- WEEK PANELS -->
 <div id="panels"></div>
 
-<div class="footer-note">🔗 This tracker is shared — changes made by either person are saved and visible to both.</div>
+<div class="footer-note">🔗 This tracker is shared — changes made by either person are saved and visible to both, in real time.</div>
 
 <div class="toast" id="toast">✓ Saved</div>
 
 <script>
+// ───────────────────────────────────────────────────────────
+// SUPABASE SETUP
+// ───────────────────────────────────────────────────────────
+const SUPABASE_URL = "https://whvvtfxwrltvitjupleb.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndodnZ0Znh3cmx0dml0anVwbGViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExODc2MTcsImV4cCI6MjA5Njc2MzYxN30.cMIvUdrEuMsK4zCCYVZvMAgdW4mQQomEMexh2TSNswo";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const TABLE = "tracker_state";
+
 const HIGH_YIELD = ["Asthma","COPD","Pulmonary Embolism","Stroke","Acute Coronary Syndrome","Heart Failure","Diabetes","Preeclampsia","Postpartum Haemorrhage (PPH)","Meningitis"];
-const STORAGE_KEY = "lucy_tracker_v2";
 
 const WEEK_DEFS = [
   { title: "Week 1: Respiratory", color: "#5B8AF0", light: "#EEF3FE",
@@ -262,7 +279,7 @@ const WEEK_DEFS = [
 ];
 
 // ── FIXED start date: 11 June 2025 (the day of the first session with Lucy) ──
-// This never changes, so dates are always stable regardless of when you open the tracker.
+// Never recalculated from "today" — dates are permanently fixed.
 function buildWeeks() {
   const START = new Date(2025, 5, 11); // month is 0-indexed: 5 = June
   const fmt = d => d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
@@ -288,22 +305,48 @@ function buildWeeks() {
 const WEEKS = buildWeeks();
 const TOTAL = WEEKS.reduce((s, w) => s + w.topics.length, 0);
 
-// State
+// ───────────────────────────────────────────────────────────
+// STATE — backed by Supabase table `tracker_state`
+// Columns: topic_key (text, PK), done (bool), stars (int), weak (text), notes (text)
+// ───────────────────────────────────────────────────────────
 let state = {};
-
-function loadState() {
-  try { const s = localStorage.getItem(STORAGE_KEY); if (s) state = JSON.parse(s); } catch(e) {}
-}
-
-function saveState() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    showToast();
-  } catch(e) {}
-}
 
 function key(wi, ti) { return `w${wi}_t${ti}`; }
 function getData(wi, ti) { return state[key(wi, ti)] || { done: false, stars: 0, weak: "", notes: "" }; }
+
+async function loadState() {
+  const { data, error } = await sb.from(TABLE).select("*");
+  if (error) {
+    console.error("Load error:", error);
+    return;
+  }
+  (data || []).forEach(row => {
+    state[row.topic_key] = {
+      done: !!row.done,
+      stars: row.stars || 0,
+      weak: row.weak || "",
+      notes: row.notes || ""
+    };
+  });
+}
+
+let saveTimers = {};
+async function saveState(k) {
+  const d = state[k] || { done: false, stars: 0, weak: "", notes: "" };
+  const { error } = await sb.from(TABLE).upsert({
+    topic_key: k,
+    done: d.done,
+    stars: d.stars,
+    weak: d.weak,
+    notes: d.notes,
+    updated_at: new Date().toISOString()
+  });
+  if (error) {
+    console.error("Save error:", error);
+    return;
+  }
+  showToast();
+}
 
 // Toast
 let toastTimer;
@@ -326,6 +369,8 @@ function isToday(dateObj) {
 function build() {
   const tabsEl = document.getElementById("tabs");
   const panelsEl = document.getElementById("panels");
+  tabsEl.innerHTML = "";
+  panelsEl.innerHTML = "";
 
   WEEKS.forEach((week, wi) => {
     // Tab
@@ -442,7 +487,7 @@ function toggleDone(k) {
   card.style.borderLeft = `4px solid ${d ? "#22C55E" : week.color}`;
   btn.className = "done-btn" + (d ? " completed" : "");
   btn.textContent = d ? "✅ Done" : "Mark Done";
-  saveState();
+  saveState(k);
   updateStats();
 }
 
@@ -454,14 +499,14 @@ function setStar(k, val) {
     const s = document.getElementById(`star-${k}-${i}`);
     if (s) s.className = "star" + (i <= v ? " active" : "");
   }
-  saveState();
+  saveState(k);
   updateStats();
 }
 
 function updateNote(k, field, val) {
   if (!state[k]) state[k] = { done: false, stars: 0, weak: "", notes: "" };
   state[k][field] = val;
-  saveState();
+  saveState(k);
 }
 
 function toggleExpand(k) {
@@ -511,8 +556,50 @@ function updateStats() {
   }
 }
 
-loadState();
-build();
+// ───────────────────────────────────────────────────────────
+// REALTIME — when Lucy or Madhav changes something on another
+// device, update this view automatically without a refresh.
+// ───────────────────────────────────────────────────────────
+function applyRemoteUpdate(row) {
+  if (!row || !row.topic_key) return;
+  const k = row.topic_key;
+  state[k] = {
+    done: !!row.done,
+    stars: row.stars || 0,
+    weak: row.weak || "",
+    notes: row.notes || ""
+  };
+
+  // Re-render just this card if it currently exists in the DOM
+  const card = document.getElementById(`card-${k}`);
+  if (card) {
+    const [wiStr, tiStr] = k.replace("w","").split("_t");
+    const wi = parseInt(wiStr), ti = parseInt(tiStr);
+    const week = WEEKS[wi];
+    const topic = week.topics[ti];
+    const newCard = buildCard(wi, ti, topic, week);
+    card.replaceWith(newCard);
+  }
+  updateStats();
+}
+
+function subscribeRealtime() {
+  sb.channel("tracker_state_changes")
+    .on("postgres_changes", { event: "*", schema: "public", table: TABLE }, payload => {
+      applyRemoteUpdate(payload.new);
+    })
+    .subscribe();
+}
+
+// ───────────────────────────────────────────────────────────
+// INIT
+// ───────────────────────────────────────────────────────────
+(async function init() {
+  await loadState();
+  build();
+  subscribeRealtime();
+  document.getElementById("loading-screen").style.display = "none";
+})();
 </script>
 </body>
 </html>
